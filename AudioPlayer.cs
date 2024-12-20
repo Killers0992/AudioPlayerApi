@@ -62,6 +62,7 @@ public class AudioPlayer : MonoBehaviour
             player.Owners = owners;
 
         onIntialCreation?.Invoke(player);
+        AudioPlayerByName.Add(name, player);
 
         return player;
     }
