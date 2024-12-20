@@ -13,6 +13,14 @@
 
 ---
 
+# Audio requirements
+
+- Format .ogg
+- Channels: 1 ( MONO )
+- Freq: 48Khz
+
+---
+
 ## Installation
 
 1. Download latest [dependencies.zip](https://github.com/Killers0992/AudioPlayer/releases/latest/download/dependencies.zip) from ``Releases``.
