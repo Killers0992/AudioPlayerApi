@@ -1,0 +1,104 @@
+﻿public class Speaker : MonoBehaviour
+{
+    /// <summary>
+    /// Base SpeakerToy instance that this Speaker is wrapping around.
+    /// </summary>
+    public SpeakerToy Base;
+
+    /// <summary>
+    /// Owner of speaker.
+    /// </summary>
+    public AudioPlayer Owner;
+
+    /// <summary>
+    /// Gets name of speaker.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the volume of the speaker.
+    /// </summary>
+    public float Volume
+    {
+        get => Base.Volume;
+        set => Base.Volume = value;
+    }
+
+    /// <summary>
+    /// Gets or sets whether the speaker uses spatial audio.
+    /// </summary>
+    public bool IsSpatial
+    {
+        get => Base.IsSpatial;
+        set => Base.IsSpatial = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum distance at which the audio is audible.
+    /// </summary>
+    public float MaxDistance
+    {
+        get => Base.MaxDistance;
+        set => Base.MaxDistance = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the minimum distance at which the audio is at full volume.
+    /// </summary>
+    public float MinDistance
+    {
+        get => Base.MinDistance;
+        set => Base.MinDistance = value;
+    }
+
+    void OnDestroy()
+    {
+        Owner?.RemoveSpeaker(Name);
+    }
+
+    /// <summary>
+    /// Creates a new speaker instance in the scene.
+    /// </summary>
+    /// <param name="controllerId">The network controller ID associated with the speaker.</param>
+    /// <param name="position">The position to place the speaker in world coordinates.</param>
+    /// <param name="rotation">The rotation of the speaker, specified as a Vector3 (Euler angles).</param>
+    /// <param name="scale">The local scale of the speaker.</param>
+    /// <param name="volume">The initial volume of the speaker. Default is 1f.</param>
+    /// <param name="isSpatial">Whether the audio is spatialized. Default is true.</param>
+    /// <param name="minDistance">The minimum distance for full-volume audio. Default is 5f.</param>
+    /// <param name="maxDistance">The maximum audible distance for the audio. Default is 5f.</param>
+    /// <returns>A new <see cref="Speaker"/> instance if successful; otherwise, null.</returns>
+    public static Speaker Create(byte controllerId, Vector3 position, Vector3 rotation, Vector3 scale, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
+    {
+        SpeakerToy target = null;
+        foreach (GameObject pref in NetworkClient.prefabs.Values)
+        {
+            if (!pref.TryGetComponent(out target))
+                continue;
+
+            break;
+        }
+
+        // This should never happen but safety.
+        if (target == null)
+            return null;
+
+        SpeakerToy newInstance = Instantiate(target, position, Quaternion.Euler(rotation));
+
+        newInstance.NetworkControllerId = controllerId;
+
+        newInstance.NetworkVolume = volume;
+        newInstance.IsSpatial = isSpatial;
+        newInstance.MinDistance = minDistance;
+        newInstance.MaxDistance = maxDistance;
+
+        newInstance.transform.localScale = scale;
+
+        Speaker speaker = newInstance.gameObject.AddComponent<Speaker>();
+        speaker.Base = newInstance;
+
+        NetworkServer.Spawn(newInstance.gameObject);
+
+        return speaker;
+    }
+}
