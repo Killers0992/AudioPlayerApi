@@ -82,6 +82,57 @@ AudioClipStorage.LoadClip("C:\\audio\\background.ogg", "bgMusic");
 AudioClipPlayback clip = player.AddClip("bgMusic", volume: 0.8f, loop: true);
 ```
 
+# Using `AudioPlayer` for Global Sounds
+
+This example demonstrates how to use the `AudioPlayer` API to play global sounds that can be heard by all players on the server.
+
+## Code Example
+
+```csharp
+using Northwood; // Import the required namespaces
+using UnityEngine;
+using System.Collections.Generic;
+
+[PluginEntryPoint("GlobalAudioExample", "1.0.0", "Demonstrates global audio playback.", "Killers0992")]
+public class GlobalAudioExample
+{
+    public void Entry()
+    {
+        // Register events for handling global audio logic
+        EventManager.RegisterAllEvents(this);
+
+        // Preload audio clips
+        AudioClipStorage.LoadClip("C:\\Sounds\\announcement.ogg", "announcement");
+        AudioClipStorage.LoadClip("C:\\Sounds\\alert.ogg", "alert");
+    }
+
+    [PluginEvent]
+    public void OnRoundStart(RoundStartEvent ev)
+    {
+        AudioPlayer globalPlayer = AudioPlayer.Create("GlobalAudioPlayer");
+
+        Speaker globalSpeaker = globalPlayer.AddSpeaker("GlobalSpeaker");
+
+        globalPlayer.AddClip("announcement", volume: 1f, loop: false, destroyOnEnd: true);
+    }
+
+    [PluginEvent]
+    public void OnCustomEvent(PlayerLeftEvent ev)
+    {
+        // Example of playing an alert sound globally during a custom event
+        AudioPlayer globalPlayer;
+
+        if (!AudioPlayer.AudioPlayerByName.TryGetValue("GlobalAudioPlayer", out globalPlayer))
+        {
+            ServerConsole.AddLog("[AudioPlayer] Global audio player not found!");
+            return;
+        }
+
+        // Add an alert sound clip to the global player
+        globalPlayer.AddClip("alert", volume: 0.8f);
+    }
+}
+```
 
 ---
 
