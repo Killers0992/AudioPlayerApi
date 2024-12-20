@@ -15,7 +15,7 @@
 
 ## Installation
 
-1. Download latest ``dependencies.zip`` from ``Releases``.
+1. Download latest [dependencies.zip](https://github.com/Killers0992/AudioPlayer/releases/latest/download/dependencies.zip) from ``Releases``.
 2. Extract all files and put in your dependencies folder. ( this path may be different depending on which plugin framework you use )
 
 ---
