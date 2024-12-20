@@ -75,6 +75,14 @@ void OnToggle(PlayerToggleFlashlightEvent ev)
 }
 ```
 
+### Adding and Playing Audio Clips
+
+```csharp
+AudioClipStorage.LoadClip("C:\\audio\\background.ogg", "bgMusic");
+AudioClipPlayback clip = player.AddClip("bgMusic", volume: 0.8f, loop: true);
+```
+
+
 ---
 
 ## API Overview
