@@ -35,9 +35,9 @@ public class AudioClipPlayback
     {
         Id = id;
         Clip = clip;
-		Volume = volume;
-		Loop = loop;
-		DestroyOnEnd = destroyOnEnd;
+        Volume = volume;
+        Loop = loop;
+        DestroyOnEnd = destroyOnEnd;
     }
 
     /// <summary>
@@ -81,38 +81,38 @@ public class AudioClipPlayback
     /// Gets the total duration of the audio clip.
     /// </summary>
     public TimeSpan Duration
-	{
-		get
-		{
-			double duration = Samples.Length / (SamplingRate * Channels);
+    {
+        get
+        {
+            double duration = Samples.Length / (SamplingRate * Channels);
 
-			return TimeSpan.FromSeconds(duration);
-		}
-	}
+            return TimeSpan.FromSeconds(duration);
+        }
+    }
 
     /// <summary>
     /// Gets the current playback position as a time value.
     /// </summary>
     public TimeSpan CurrentTime
-	{
-		get
-		{
-			double duration = ReadPosition / (SamplingRate * Channels);
+    {
+        get
+        {
+            double duration = ReadPosition / (SamplingRate * Channels);
 
-			return TimeSpan.FromSeconds(duration);
-		}
-	}
+            return TimeSpan.FromSeconds(duration);
+        }
+    }
 
     /// <summary>
     /// Gets the current playback progress as a percentage.
     /// </summary>
     public float Progress
-	{
-		get
-		{
-			return Mathf.Clamp01((float) ReadPosition / Samples.Length);
-		}
-	}
+    {
+        get
+        {
+            return Mathf.Clamp01((float)ReadPosition / Samples.Length);
+        }
+    }
 
     /// <summary>
     /// Gets or sets the current read position in the audio clip.
@@ -140,11 +140,11 @@ public class AudioClipPlayback
     /// <returns>True if the sample was successfully prepared; otherwise, false.</returns>
     public bool PrepareSample()
     {
-		bool destroy = false;
+        bool destroy = false;
 
-		NextSample = ReadPcmChunk(ref destroy);
+        NextSample = ReadPcmChunk(ref destroy);
 
-		return !destroy;
+        return !destroy;
     }
 
     /// <summary>
@@ -155,30 +155,30 @@ public class AudioClipPlayback
     public float[] ReadPcmChunk(ref bool destroy)
     {
         if (IsPaused)
-			return null;
+            return null;
 
-		if (Samples.Length == 0)
-			return null;
+        if (Samples.Length == 0)
+            return null;
 
-		if (ReadPosition >= Samples.Length)
-		{
-			if (Loop)
-				ReadPosition = 0;
-			else
-			{
-				destroy = true;
-				return null;
-			}
-		}
+        if (ReadPosition >= Samples.Length)
+        {
+            if (Loop)
+                ReadPosition = 0;
+            else
+            {
+                destroy = true;
+                return null;
+            }
+        }
 
-		int samplesToSend = Math.Min(PacketSize, Samples.Length - ReadPosition);
+        int samplesToSend = Math.Min(PacketSize, Samples.Length - ReadPosition);
         float[] pcmChunk = new float[samplesToSend];
 
-		Array.Copy(Samples, ReadPosition, pcmChunk, 0, samplesToSend);
+        Array.Copy(Samples, ReadPosition, pcmChunk, 0, samplesToSend);
 
-		ReadPosition += samplesToSend;
+        ReadPosition += samplesToSend;
 
-		return PadPCMFloat(pcmChunk, PacketSize);
+        return PadPCMFloat(pcmChunk, PacketSize);
     }
 
     /// <summary>
@@ -208,12 +208,12 @@ public class AudioClipPlayback
     /// <returns>A mixed PCM buffer.</returns>
     public static float[] MixPlaybacks(AudioClipPlayback[] playbacks, ref List<int> clipsToDestroy)
     {
-		bool invalid = true;
+        bool invalid = true;
 
         foreach (AudioClipPlayback playback in playbacks)
         {
-			if (!playback.PrepareSample())
-				clipsToDestroy.Add(playback.Id);
+            if (!playback.PrepareSample())
+                clipsToDestroy.Add(playback.Id);
         }
 
         for (int i = 0; i < PacketSize; i++)
@@ -227,21 +227,21 @@ public class AudioClipPlayback
 
                 float sample = playbacks[j].NextSample[i] * playbacks[j].Volume;
                 mixedSample += sample;
-				invalid = false;
+                invalid = false;
 
-			}
+            }
 
-            if (mixedSample > 1.0f) 
+            if (mixedSample > 1.0f)
                 mixedSample = 1.0f;
 
-            if (mixedSample < -1.0f) 
+            if (mixedSample < -1.0f)
                 mixedSample = -1.0f;
 
             _mixedData[i] = mixedSample;
         }
 
-		if (invalid)
-			return null;
+        if (invalid)
+            return null;
 
         return _mixedData;
     }

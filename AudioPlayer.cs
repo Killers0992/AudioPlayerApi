@@ -19,17 +19,17 @@ public class AudioPlayer : MonoBehaviour
     /// <param name="name">The unique name for the AudioPlayer instance.</param>
     /// <returns>A new <see cref="AudioPlayer"/> instance if the name is unique; otherwise, null.</returns>
     public static AudioPlayer Create(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255)
-	{
-		if (AudioPlayerByName.ContainsKey(name))
-		{
-			ServerConsole.AddLog($"[AudioPlayer] Player with name {name} already exists!");
-			return null;
-		}
+    {
+        if (AudioPlayerByName.ContainsKey(name))
+        {
+            ServerConsole.AddLog($"[AudioPlayer] Player with name {name} already exists!");
+            return null;
+        }
 
-		GameObject go = new GameObject(name);
-		go.hideFlags = HideFlags.DontUnloadUnusedAsset;
+        GameObject go = new GameObject(name);
+        go.hideFlags = HideFlags.DontUnloadUnusedAsset;
 
-		AudioPlayer player = go.AddComponent<AudioPlayer>();
+        AudioPlayer player = go.AddComponent<AudioPlayer>();
 
         byte targetId = controllerId;
 
@@ -47,22 +47,22 @@ public class AudioPlayer : MonoBehaviour
         }
 
         player.ControllerID = targetId;
-		player.Name = name;
-        
+        player.Name = name;
+
         if (!string.IsNullOrEmpty(autoPlayClip) && AudioClipStorage.AudioClips.ContainsKey(autoPlayClip))
         {
             onAutoPlay?.Invoke(player);
             player.AddClip(autoPlayClip);
         }
-        
+
         player.DestroyWhenAllClipsPlayed = destroyWhenAllClipsPlayed;
         player.SendSoundGlobally = sendSoundGlobally;
 
         if (owners != null)
             player.Owners = owners;
 
-		return player;
-	}
+        return player;
+    }
 
     /// <summary>
     /// Internal buffer for mixed PCM audio data.
@@ -123,20 +123,20 @@ public class AudioPlayer : MonoBehaviour
     /// Gets the next available ID for a new audio clip.
     /// </summary>
     public int GetNextId
-	{
-		get
-		{
-			for(int x = 0; x < int.MaxValue; x++)
-			{
-				if (ClipsById.ContainsKey(x))
-					continue;
+    {
+        get
+        {
+            for (int x = 0; x < int.MaxValue; x++)
+            {
+                if (ClipsById.ContainsKey(x))
+                    continue;
 
-				return x;
-			}
+                return x;
+            }
 
-			return 0;
-		}
-	}
+            return 0;
+        }
+    }
 
     /// <summary>
     /// Adds a new audio clip to the AudioPlayer.
@@ -147,14 +147,14 @@ public class AudioPlayer : MonoBehaviour
     /// <param name="destroyOnEnd">Whether the clip should be destroyed after playback ends. Default is true.</param>
     /// <returns>A new <see cref="AudioClipPlayback"/> instance.</returns>
     public AudioClipPlayback AddClip(string clipName, float volume = 1f, bool loop = false, bool destroyOnEnd = true)
-	{
-		int newId = GetNextId;
+    {
+        int newId = GetNextId;
 
-		AudioClipPlayback clip = new AudioClipPlayback(newId, clipName, volume, loop, destroyOnEnd);
-		ClipsById.Add(newId, clip);
+        AudioClipPlayback clip = new AudioClipPlayback(newId, clipName, volume, loop, destroyOnEnd);
+        ClipsById.Add(newId, clip);
 
-		return clip;
-	}
+        return clip;
+    }
 
     /// <summary>
     /// Adds a new speaker with the specified parameters.
@@ -200,16 +200,16 @@ public class AudioPlayer : MonoBehaviour
     /// Called when the component is initialized.
     /// </summary>
     void Awake()
-	{
-		InvokeRepeating(nameof(SendAudioData), 0, (float) AudioClipPlayback.PacketSize / AudioClipPlayback.SamplingRate);
-	}
+    {
+        InvokeRepeating(nameof(SendAudioData), 0, (float)AudioClipPlayback.PacketSize / AudioClipPlayback.SamplingRate);
+    }
 
     /// <summary>
     /// Sends mixed audio data to the network.
     /// </summary>
     void SendAudioData()
     {
-		if (ClipsById.Count == 0)
+        if (ClipsById.Count == 0)
         {
             if (DestroyWhenAllClipsPlayed)
                 Destroy(this.gameObject);
@@ -218,27 +218,27 @@ public class AudioPlayer : MonoBehaviour
 
         _mixedPcm = AudioClipPlayback.MixPlaybacks(ClipsById.Values.ToArray(), ref clipsToDestroy);
 
-		bool anyRemoved = false;
-		foreach(int clipId in clipsToDestroy)
-		{
-			ClipsById.Remove(clipId);
-			anyRemoved = true;
-		}
+        bool anyRemoved = false;
+        foreach (int clipId in clipsToDestroy)
+        {
+            ClipsById.Remove(clipId);
+            anyRemoved = true;
+        }
 
-		if (anyRemoved)
-			clipsToDestroy.Clear();
+        if (anyRemoved)
+            clipsToDestroy.Clear();
 
-		//This can only happen when theres clips which are paused.
-		if (_mixedPcm == null)
-			return;
+        //This can only happen when theres clips which are paused.
+        if (_mixedPcm == null)
+            return;
 
-		int encodedLength = encoder.Encode(_mixedPcm, _encodedPcm);
+        int encodedLength = encoder.Encode(_mixedPcm, _encodedPcm);
 
-		if (encodedLength <= 0)
-		{
-			ServerConsole.AddLog($"[AudioPlayer] Failed to encode audio!");
-			return;
-		}
+        if (encodedLength <= 0)
+        {
+            ServerConsole.AddLog($"[AudioPlayer] Failed to encode audio!");
+            return;
+        }
 
         if (SendSoundGlobally)
         {
@@ -270,12 +270,12 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     void OnDestroy()
     {
-		if (IsInvoking(nameof(SendAudioData)))
-			CancelInvoke(nameof(SendAudioData));
+        if (IsInvoking(nameof(SendAudioData)))
+            CancelInvoke(nameof(SendAudioData));
 
         AudioPlayerById.Remove(ControllerID);
 
-		AudioPlayerByName.Remove(Name);
+        AudioPlayerByName.Remove(Name);
 
         encoder?.Dispose();
         encoder = null;
