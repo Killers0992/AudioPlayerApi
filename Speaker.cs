@@ -16,6 +16,15 @@
     public string Name { get; set; }
 
     /// <summary>
+    /// Gets or sets speaker position.
+    /// </summary>
+    public Vector3 Position
+    {
+        get => transform.position;
+        set => transform.position = value;
+    }
+
+    /// <summary>
     /// Gets or sets the volume of the speaker.
     /// </summary>
     public float Volume
@@ -61,14 +70,12 @@
     /// </summary>
     /// <param name="controllerId">The network controller ID associated with the speaker.</param>
     /// <param name="position">The position to place the speaker in world coordinates.</param>
-    /// <param name="rotation">The rotation of the speaker, specified as a Vector3 (Euler angles).</param>
-    /// <param name="scale">The local scale of the speaker.</param>
     /// <param name="volume">The initial volume of the speaker. Default is 1f.</param>
     /// <param name="isSpatial">Whether the audio is spatialized. Default is true.</param>
     /// <param name="minDistance">The minimum distance for full-volume audio. Default is 5f.</param>
     /// <param name="maxDistance">The maximum audible distance for the audio. Default is 5f.</param>
     /// <returns>A new <see cref="Speaker"/> instance if successful; otherwise, null.</returns>
-    public static Speaker Create(byte controllerId, Vector3 position, Vector3 rotation, Vector3 scale, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
+    public static Speaker Create(byte controllerId, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
     {
         SpeakerToy target = null;
         foreach (GameObject pref in NetworkClient.prefabs.Values)
@@ -83,7 +90,7 @@
         if (target == null)
             return null;
 
-        SpeakerToy newInstance = Instantiate(target, position, Quaternion.Euler(rotation));
+        SpeakerToy newInstance = Instantiate(target, position, Quaternion.identity);
 
         newInstance.NetworkControllerId = controllerId;
 
@@ -91,8 +98,6 @@
         newInstance.IsSpatial = isSpatial;
         newInstance.MinDistance = minDistance;
         newInstance.MaxDistance = maxDistance;
-
-        newInstance.transform.localScale = scale;
 
         Speaker speaker = newInstance.gameObject.AddComponent<Speaker>();
         speaker.Base = newInstance;

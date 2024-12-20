@@ -159,7 +159,7 @@ public class AudioPlayer : MonoBehaviour
     /// <summary>
     /// Adds a new speaker with the specified parameters.
     /// </summary>
-    public Speaker AddSpeaker(string name, Vector3 position, Vector3 rotation, Vector3 scale, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
+    public Speaker AddSpeaker(string name, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
     {
         if (SpeakersByName.ContainsKey(name))
         {
@@ -167,7 +167,7 @@ public class AudioPlayer : MonoBehaviour
             return null;
         }
 
-        Speaker speaker = Speaker.Create(ControllerID, position, rotation, scale, volume, isSpatial, minDistance, maxDistance);
+        Speaker speaker = Speaker.Create(ControllerID, position, volume, isSpatial, minDistance, maxDistance);
 
         speaker.Name = name;
         speaker.Owner = this;
@@ -180,20 +180,8 @@ public class AudioPlayer : MonoBehaviour
     /// <summary>
     /// Overloaded methods for adding speakers with fewer parameters.
     /// </summary>
-    public Speaker AddSpeaker(string name, Vector3 position, Vector3 rotation, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f) =>
-        this.AddSpeaker(name, position, rotation, Vector3.one, volume, isSpatial, minDistance, maxDistance);
-
-    /// <summary>
-    /// Overloaded methods for adding speakers with fewer parameters.
-    /// </summary>
-    public Speaker AddSpeaker(string name, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f) =>
-        this.AddSpeaker(name, position, Vector3.zero, Vector3.one, volume, isSpatial, minDistance, maxDistance);
-
-    /// <summary>
-    /// Overloaded methods for adding speakers with fewer parameters.
-    /// </summary>
     public Speaker AddSpeaker(string name, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f) =>
-        this.AddSpeaker(name, Vector3.zero, Vector3.zero, Vector3.one, volume, isSpatial, minDistance, maxDistance);
+        this.AddSpeaker(name, Vector3.zero, volume, isSpatial, minDistance, maxDistance);
 
     /// <summary>
     /// Removes a speaker by its name.
