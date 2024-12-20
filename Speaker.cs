@@ -60,6 +60,11 @@
         set => Base.MinDistance = value;
     }
 
+    /// <summary>
+    /// Destroys speaker.
+    /// </summary>
+    public void Destroy() => UnityEngine.Object.Destroy(gameObject);
+
     void OnDestroy()
     {
         Owner?.RemoveSpeaker(Name);

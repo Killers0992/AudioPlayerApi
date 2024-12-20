@@ -18,7 +18,7 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     /// <param name="name">The unique name for the AudioPlayer instance.</param>
     /// <returns>A new <see cref="AudioPlayer"/> instance if the name is unique; otherwise, null.</returns>
-    public static AudioPlayer Create(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255)
+    public static AudioPlayer Create(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255, Action<AudioPlayer> onIntialCreation = null)
     {
         if (AudioPlayerByName.ContainsKey(name))
         {
@@ -61,7 +61,30 @@ public class AudioPlayer : MonoBehaviour
         if (owners != null)
             player.Owners = owners;
 
+        onIntialCreation?.Invoke(player);
+
         return player;
+    }
+
+    /// <summary>
+    /// Creates a new AudioPlayer instance with the specified name or gets existing one.
+    /// </summary>
+    /// <param name="name">The unique name for the AudioPlayer instance.</param>
+    /// <returns>A new <see cref="AudioPlayer"/> instance if the name is unique; otherwise, null.</returns>
+    public static AudioPlayer CreateOrGet(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255, Action<AudioPlayer> onIntialCreation = null)
+    {
+        if (AudioPlayerByName.TryGetValue(name, out AudioPlayer player))
+        {
+            if (!string.IsNullOrEmpty(autoPlayClip) && AudioClipStorage.AudioClips.ContainsKey(autoPlayClip))
+            {
+                onAutoPlay?.Invoke(player);
+                player.AddClip(autoPlayClip);
+            }
+
+            return player;
+        }
+
+        return Create(name, autoPlayClip, onAutoPlay, destroyWhenAllClipsPlayed, sendSoundGlobally, owners, controllerId, onIntialCreation);
     }
 
     /// <summary>
@@ -197,6 +220,11 @@ public class AudioPlayer : MonoBehaviour
     }
 
     /// <summary>
+    /// Destroys audioplayer.
+    /// </summary>
+    public void Destroy() => UnityEngine.Object.Destroy(gameObject);
+
+    /// <summary>
     /// Called when the component is initialized.
     /// </summary>
     void Awake()
@@ -272,6 +300,13 @@ public class AudioPlayer : MonoBehaviour
     {
         if (IsInvoking(nameof(SendAudioData)))
             CancelInvoke(nameof(SendAudioData));
+
+        foreach (var speaker in SpeakersByName.Values)
+        {
+            speaker.Destroy();
+        }
+
+        SpeakersByName = null;
 
         AudioPlayerById.Remove(ControllerID);
 
