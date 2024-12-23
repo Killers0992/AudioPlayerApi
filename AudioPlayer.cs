@@ -1,3 +1,5 @@
+using Utils.Networking;
+
 /// <summary>
 /// Represents an audio player that can manage and play multiple audio clips.
 /// </summary>
@@ -18,7 +20,7 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     /// <param name="name">The unique name for the AudioPlayer instance.</param>
     /// <returns>A new <see cref="AudioPlayer"/> instance if the name is unique; otherwise, null.</returns>
-    public static AudioPlayer Create(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255, Action<AudioPlayer> onIntialCreation = null)
+    public static AudioPlayer Create(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255, Action<AudioPlayer> onIntialCreation = null, Func<ReferenceHub, bool> condition = null)
     {
         if (AudioPlayerByName.ContainsKey(name))
         {
@@ -56,6 +58,7 @@ public class AudioPlayer : MonoBehaviour
         }
 
         player.DestroyWhenAllClipsPlayed = destroyWhenAllClipsPlayed;
+        player.Condition = condition;
         player.SendSoundGlobally = sendSoundGlobally;
 
         if (owners != null)
@@ -72,7 +75,7 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     /// <param name="name">The unique name for the AudioPlayer instance.</param>
     /// <returns>A new <see cref="AudioPlayer"/> instance if the name is unique; otherwise, null.</returns>
-    public static AudioPlayer CreateOrGet(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255, Action<AudioPlayer> onIntialCreation = null)
+    public static AudioPlayer CreateOrGet(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255, Action<AudioPlayer> onIntialCreation = null, Func<ReferenceHub, bool> condition = null)
     {
         if (AudioPlayerByName.TryGetValue(name, out AudioPlayer player))
         {
@@ -85,7 +88,7 @@ public class AudioPlayer : MonoBehaviour
             return player;
         }
 
-        return Create(name, autoPlayClip, onAutoPlay, destroyWhenAllClipsPlayed, sendSoundGlobally, owners, controllerId, onIntialCreation);
+        return Create(name, autoPlayClip, onAutoPlay, destroyWhenAllClipsPlayed, sendSoundGlobally, owners, controllerId, onIntialCreation, condition);
     }
 
     /// <summary>
@@ -137,6 +140,11 @@ public class AudioPlayer : MonoBehaviour
     /// Gets owners of this audioplayer which will receive this sound.
     /// </summary>
     public List<ReferenceHub> Owners = new List<ReferenceHub>();
+
+    /// <summary>
+    /// Gets used condition who will be able to hear sounds.
+    /// </summary>
+    public Func<ReferenceHub, bool> Condition { get; set; }
 
     /// <summary>
     /// Gets or sets the ID of the controller associated with this AudioPlayer.
@@ -269,27 +277,28 @@ public class AudioPlayer : MonoBehaviour
             return;
         }
 
+        AudioMessage msg = new AudioMessage
+        {
+            ControllerId = ControllerID,
+            Data = _encodedPcm,
+            DataLength = encodedLength,
+        };
+
+        if (Condition != null)
+        {
+            msg.SendToHubsConditionally(Condition);
+            return;
+        }
+
         if (SendSoundGlobally)
         {
-            NetworkServer.SendToReady(new AudioMessage
-            {
-                ControllerId = ControllerID,
-                Data = _encodedPcm,
-                DataLength = encodedLength,
-            });
+            NetworkServer.SendToReady(msg);
         }
         else if (Owners.Count != 0)
         {
-            AudioMessage message = new AudioMessage
-            {
-                ControllerId = ControllerID,
-                Data = _encodedPcm,
-                DataLength = encodedLength,
-            };
-
             foreach (ReferenceHub owner in Owners)
             {
-                owner.connectionToClient.Send(message);
+                owner.connectionToClient.Send(msg);
             }
         }
     }
