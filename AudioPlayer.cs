@@ -77,7 +77,7 @@ public class AudioPlayer : MonoBehaviour
     /// <returns>A new <see cref="AudioPlayer"/> instance if the name is unique; otherwise, null.</returns>
     public static AudioPlayer CreateOrGet(string name, string autoPlayClip = null, Action<AudioPlayer> onAutoPlay = null, bool destroyWhenAllClipsPlayed = false, bool sendSoundGlobally = true, List<ReferenceHub> owners = null, byte controllerId = 255, Action<AudioPlayer> onIntialCreation = null, Func<ReferenceHub, bool> condition = null)
     {
-        if (AudioPlayerByName.TryGetValue(name, out AudioPlayer player))
+        if (TryGet(name, out AudioPlayer player))
         {
             if (!string.IsNullOrEmpty(autoPlayClip) && AudioClipStorage.AudioClips.ContainsKey(autoPlayClip))
             {
@@ -90,6 +90,14 @@ public class AudioPlayer : MonoBehaviour
 
         return Create(name, autoPlayClip, onAutoPlay, destroyWhenAllClipsPlayed, sendSoundGlobally, owners, controllerId, onIntialCreation, condition);
     }
+
+    /// <summary>
+    /// Attempts to retrieve an audio player by its name.
+    /// </summary>
+    /// <param name="name">The name of the audio player.</param>
+    /// <param name="player">The retrieved audio player if found.</param>
+    /// <returns>True if the audio player is found; otherwise, false.</returns>
+    public static bool TryGet(string name, out AudioPlayer player) => AudioPlayerByName.TryGetValue(name, out player);
 
     /// <summary>
     /// Internal buffer for mixed PCM audio data.
@@ -189,6 +197,22 @@ public class AudioPlayer : MonoBehaviour
     }
 
     /// <summary>
+    /// Removes all audio clips currently stored in the player.
+    /// </summary>
+    public void RemoveAllClips()
+    {
+        ClipsById.Clear();
+    }
+
+    /// <summary>
+    /// Attempts to retrieve an audio clip by its unique identifier.
+    /// </summary>
+    /// <param name="clipId">The unique identifier of the audio clip.</param>
+    /// <param name="clip">The retrieved audio clip playback object if found.</param>
+    /// <returns>True if the audio clip is found; otherwise, false.</returns>
+    public bool TryGetClip(int clipId, out AudioClipPlayback clip) => ClipsById.TryGetValue(clipId, out clip);
+
+    /// <summary>
     /// Adds a new speaker with the specified parameters.
     /// </summary>
     public Speaker AddSpeaker(string name, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
@@ -227,6 +251,32 @@ public class AudioPlayer : MonoBehaviour
         SpeakersByName.Remove(name);
         return true;
     }
+
+    /// <summary>
+    /// Sets the position of a specified speaker in the 3D space.
+    /// </summary>
+    /// <param name="name">The name of the speaker.</param>
+    /// <param name="position">The new position of the speaker in 3D space.</param>
+    /// <returns>True if the speaker was successfully updated; otherwise, false if the speaker was not found.</returns>
+    public bool SetSpeakerPosition(string name, Vector3 position)
+    {
+        if (!SpeakersByName.TryGetValue(name, out Speaker speaker))
+        {
+            ServerConsole.AddLog($"[AudioPlayer] Speaker with name {name} not found!");
+            return false;
+        }
+
+        speaker.Position = position;
+        return true;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve a speaker by its name.
+    /// </summary>
+    /// <param name="name">The name of the speaker.</param>
+    /// <param name="speaker">The retrieved speaker object if found.</param>
+    /// <returns>True if the speaker is found; otherwise, false.</returns>
+    public bool TryGetSpeaker(string name, out Speaker speaker) => SpeakersByName.TryGetValue(name, out speaker);
 
     /// <summary>
     /// Destroys audioplayer.

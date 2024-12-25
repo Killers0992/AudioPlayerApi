@@ -1,5 +1,48 @@
 ﻿public class Speaker : MonoBehaviour
 {
+
+    /// <summary>
+    /// Creates a new speaker instance in the scene.
+    /// </summary>
+    /// <param name="controllerId">The network controller ID associated with the speaker.</param>
+    /// <param name="position">The position to place the speaker in world coordinates.</param>
+    /// <param name="volume">The initial volume of the speaker. Default is 1f.</param>
+    /// <param name="isSpatial">Whether the audio is spatialized. Default is true.</param>
+    /// <param name="minDistance">The minimum distance for full-volume audio. Default is 5f.</param>
+    /// <param name="maxDistance">The maximum audible distance for the audio. Default is 5f.</param>
+    /// <returns>A new <see cref="Speaker"/> instance if successful; otherwise, null.</returns>
+    public static Speaker Create(byte controllerId, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
+    {
+        SpeakerToy target = null;
+        foreach (GameObject pref in NetworkClient.prefabs.Values)
+        {
+            if (!pref.TryGetComponent(out target))
+                continue;
+
+            break;
+        }
+
+        // This should never happen but safety.
+        if (target == null)
+            return null;
+
+        SpeakerToy newInstance = Instantiate(target, position, Quaternion.identity);
+
+        newInstance.NetworkControllerId = controllerId;
+
+        newInstance.NetworkVolume = volume;
+        newInstance.IsSpatial = isSpatial;
+        newInstance.MinDistance = minDistance;
+        newInstance.MaxDistance = maxDistance;
+
+        Speaker speaker = newInstance.gameObject.AddComponent<Speaker>();
+        speaker.Base = newInstance;
+
+        NetworkServer.Spawn(newInstance.gameObject);
+
+        return speaker;
+    }
+
     /// <summary>
     /// Base SpeakerToy instance that this Speaker is wrapping around.
     /// </summary>
@@ -65,50 +108,5 @@
     /// </summary>
     public void Destroy() => UnityEngine.Object.Destroy(gameObject);
 
-    void OnDestroy()
-    {
-        Owner?.RemoveSpeaker(Name);
-    }
-
-    /// <summary>
-    /// Creates a new speaker instance in the scene.
-    /// </summary>
-    /// <param name="controllerId">The network controller ID associated with the speaker.</param>
-    /// <param name="position">The position to place the speaker in world coordinates.</param>
-    /// <param name="volume">The initial volume of the speaker. Default is 1f.</param>
-    /// <param name="isSpatial">Whether the audio is spatialized. Default is true.</param>
-    /// <param name="minDistance">The minimum distance for full-volume audio. Default is 5f.</param>
-    /// <param name="maxDistance">The maximum audible distance for the audio. Default is 5f.</param>
-    /// <returns>A new <see cref="Speaker"/> instance if successful; otherwise, null.</returns>
-    public static Speaker Create(byte controllerId, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
-    {
-        SpeakerToy target = null;
-        foreach (GameObject pref in NetworkClient.prefabs.Values)
-        {
-            if (!pref.TryGetComponent(out target))
-                continue;
-
-            break;
-        }
-
-        // This should never happen but safety.
-        if (target == null)
-            return null;
-
-        SpeakerToy newInstance = Instantiate(target, position, Quaternion.identity);
-
-        newInstance.NetworkControllerId = controllerId;
-
-        newInstance.NetworkVolume = volume;
-        newInstance.IsSpatial = isSpatial;
-        newInstance.MinDistance = minDistance;
-        newInstance.MaxDistance = maxDistance;
-
-        Speaker speaker = newInstance.gameObject.AddComponent<Speaker>();
-        speaker.Base = newInstance;
-
-        NetworkServer.Spawn(newInstance.gameObject);
-
-        return speaker;
-    }
+    void OnDestroy() => Owner?.RemoveSpeaker(Name);
 }
