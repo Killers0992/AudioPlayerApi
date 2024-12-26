@@ -204,7 +204,9 @@ public void OnRoundStart()
 #### Static Methods
 
 - `AudioPlayer.Create(string name)`: Creates a new `AudioPlayer` instance with the specified name.
-
+- `AudioPlayer.CreateOrGet(string name)`: Creates a new `AudioPlayer` instance with the specified name or gets existing one.
+- `AudioPlayer.TryGet(string name, ...)`: Tries to get `AudioPlayer` instance with the specified name.
+  
 #### Properties
 
 - `Name`: The name of the `AudioPlayer` instance.
@@ -213,8 +215,13 @@ public void OnRoundStart()
 #### Methods
 
 - `AddClip(string clipName, float volume = 1f, bool loop = false, bool destroyOnEnd = true)`: Adds a new audio clip to the player.
+- `RemoveAllClips()`: Removes all playing clips.
+- `TryGetClip(int clipId, ...)`: Tries to get specific clip by unique identifier.
 - `AddSpeaker(string name, ...)`: Adds a new speaker to the player.
 - `RemoveSpeaker(string name)`: Removes a speaker by name.
+- `SetSpeakerPosition(string name, Vector3 position)`: Sets position of a speaker.
+- `TryGetSpeaker(string name, ...)`: Tries to get specific speaker by name.
+- `Destroy()`: Destroys audio player and all speakers created by this player.
 
 ### `Speaker` Class
 
