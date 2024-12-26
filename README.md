@@ -30,6 +30,20 @@
 
 ---
 
+## Usage
+
+**AudioPlayer** can be only used as ``plugin`` dependency which means its not a plugin rather API for other plugins to use.
+
+If you want to play something you need to follow these steps.
+
+1. Load supported audio clip.
+
+2. Create audio player.
+
+3. Add clip to audio player.
+
+``Example code for doing this can be found below.``
+
 ## Examples
 
 <details>
@@ -127,6 +141,56 @@ public void CreateSpectatorOnly()
     });
 
     audioPlayer.AddClip("shot");
+}
+```
+</details>
+
+<details>
+<summary>4. Adding clips to audio players.</summary>
+
+```C#
+// Adding clips to audio players by using their name.
+public void AddClipOnAudioPlayer()
+{
+    // Tries to get audio player with name "Spectator AudioPlayer", you need to make sure that audio player is already created.
+    if (!AudioPlayer.TryGet("Spectator AudioPlayer", out AudioPlayer audioPlayer))
+        return;
+
+    // Add shot clip and plays.
+    audioPlayer.AddClip("shot");
+}
+```
+</details>
+
+<details>
+<summary>5. Lobby music.</summary>
+
+```C#
+// Execute this method when plugin loads.
+public void OnPluginLoad()
+{
+    AudioClipStorage.LoadClip("C:\\Users\\Kille\\Documents\\Serwer\\lobby_music.ogg", "lobby_music");
+}
+
+// Execute this method via events when server is waiting for players.
+public void OnWaitingForPlayers()
+{
+    AudioPlayer lobbyPlayer = AudioPlayer.CreateOrGet("Lobby", onIntialCreation: (p) =>
+    {
+        p.AddSpeaker("Main", isSpatial: false, maxDistance: 5000f);
+    });
+
+    lobbyPlayer.AddClip("lobby_music", loop: true);
+}
+
+// Execute this method via events when server started round.
+public void OnRoundStart()
+{
+    if (!AudioPlayer.TryGet("Lobby", out AudioPlayer lobbyPlayer))
+        return;
+
+    // Removes all playing clips.
+    lobbyPlayer.RemoveAllClips();
 }
 ```
 </details>
