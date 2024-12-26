@@ -108,6 +108,29 @@ public void CreateGlobal()
 ```
 </details>
 
+<details>
+<summary>3. Spectator only audio player</summary>
+
+```C#
+// Creates audio player which only spectators can hear.
+public void CreateSpectatorOnly()
+{
+    AudioPlayer audioPlayer = AudioPlayer.CreateOrGet($"Spectator AudioPlayer", condition: (hub) =>
+    {
+        // Only players which have spectator role will hear this sound.
+        return hub.roleManager.CurrentRole.RoleTypeId == PlayerRoles.RoleTypeId.Spectator;
+    }
+    , onIntialCreation: (p) =>
+    {
+        // This created speaker will be in 2D space ( audio will be always playing directly on you not from specific location ) but make sure that max distance is set to some higher value.
+        Speaker speaker = p.AddSpeaker("Main", isSpatial: false, maxDistance: 5000f);
+    });
+
+    audioPlayer.AddClip("shot");
+}
+```
+</details>
+
 ---
 
 ## API Overview
