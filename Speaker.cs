@@ -1,6 +1,5 @@
 ﻿public class Speaker : MonoBehaviour
 {
-
     /// <summary>
     /// Creates a new speaker instance in the scene.
     /// </summary>
@@ -72,8 +71,8 @@
     /// </summary>
     public float Volume
     {
-        get => Base.Volume;
-        set => Base.Volume = value;
+        get => Base.NetworkVolume;
+        set => Base.NetworkVolume = value;
     }
 
     /// <summary>
@@ -81,8 +80,8 @@
     /// </summary>
     public bool IsSpatial
     {
-        get => Base.IsSpatial;
-        set => Base.IsSpatial = value;
+        get => Base.NetworkIsSpatial;
+        set => Base.NetworkIsSpatial = value;
     }
 
     /// <summary>
@@ -90,8 +89,8 @@
     /// </summary>
     public float MaxDistance
     {
-        get => Base.MaxDistance;
-        set => Base.MaxDistance = value;
+        get => Base.NetworkMaxDistance;
+        set => Base.NetworkMaxDistance = value;
     }
 
     /// <summary>
@@ -99,8 +98,8 @@
     /// </summary>
     public float MinDistance
     {
-        get => Base.MinDistance;
-        set => Base.MinDistance = value;
+        get => Base.NetworkMinDistance;
+        set => Base.NetworkMinDistance = value;
     }
 
     /// <summary>
