@@ -213,6 +213,24 @@ public class AudioPlayer : MonoBehaviour
     public bool TryGetClip(int clipId, out AudioClipPlayback clip) => ClipsById.TryGetValue(clipId, out clip);
 
     /// <summary>
+    /// Gets or adds a speaker with the specified parameters.
+    /// </summary>
+    public Speaker GetOrAddSpeaker(string name, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f) =>
+        GetOrAddSpeaker(name, Vector3.zero, volume, isSpatial, minDistance, maxDistance);
+
+    /// <summary>
+    /// Gets or adds a speaker with the specified parameters.
+    /// </summary>
+    public Speaker GetOrAddSpeaker(string name, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
+    {
+        if (SpeakersByName.TryGetValue(name, out Speaker speaker))
+            return speaker;
+
+        speaker = AddSpeaker(name, position, volume, isSpatial, minDistance, maxDistance);
+        return speaker;
+    }
+
+    /// <summary>
     /// Adds a new speaker with the specified parameters.
     /// </summary>
     public Speaker AddSpeaker(string name, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)

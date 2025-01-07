@@ -1,3 +1,5 @@
+using System.IO;
+
 /// <summary>
 /// Manages the storage and loading of audio clips for playback.
 /// </summary>
@@ -61,5 +63,21 @@ public class AudioClipStorage
         // Add the loaded clip data to the collection.
         AudioClips.Add(name, new AudioClipData(name, sampleRate, channels, samples));
         return true;
+    }
+
+    /// <summary>
+    /// Destroys loaded clips.
+    /// </summary>
+    /// <param name="name">Then name of clip.</param>
+    /// <returns>If clip was successfully destroyed.</returns>
+    public static bool DestroyClip(string name)
+    {
+        if (!AudioClips.ContainsKey(name))
+        {
+            ServerConsole.AddLog($"[AudioPlayer] Clip with name {name} is not loaded!");
+            return false;
+        }
+
+        return AudioClips.Remove(name);
     }
 }
