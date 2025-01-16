@@ -107,5 +107,11 @@
     /// </summary>
     public void Destroy() => UnityEngine.Object.Destroy(gameObject);
 
-    void OnDestroy() => Owner?.RemoveSpeaker(Name);
+    void OnDestroy()
+    {
+        if (Owner == null)
+            return;
+
+        Owner.SpeakersByName.Remove(Name);
+    }
 }
