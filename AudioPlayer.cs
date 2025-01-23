@@ -197,6 +197,40 @@ public class AudioPlayer : MonoBehaviour
     }
 
     /// <summary>
+    /// Removes clip by their identifier.
+    /// </summary>
+    /// <param name="clipId">The clip identifier.</param>
+    /// <returns>If successfuly removed.</returns>
+    public bool RemoveClipById(int clipId) => ClipsById.Remove(clipId);
+
+    /// <summary>
+    /// Removes clip by their name. ( remember that if theres multiple playing clips with same name all will be removed )
+    /// </summary>
+    /// <param name="clipName">The clip name.</param>
+    /// <returns>If any removed.</returns>
+    public bool RemoveClipByName(string clipName)
+    {
+        List<int> idsToDestroy = new List<int>();
+
+        foreach(AudioClipPlayback clip in ClipsById.Values)
+        {
+            if (clip.Clip == clipName)
+                idsToDestroy.Add(clip.Id);
+        }
+
+        if (idsToDestroy.Count == 0)
+            return false;
+
+        foreach(int id in idsToDestroy)
+        {
+            ClipsById.Remove(id);
+        }
+
+        return true;
+    }
+
+
+    /// <summary>
     /// Removes all audio clips currently stored in the player.
     /// </summary>
     public void RemoveAllClips()
