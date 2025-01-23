@@ -183,6 +183,50 @@ public void OnRoundStart()
 ```
 </details>
 
+<details>
+<summary>6. Remove clips by their name.</summary>
+
+```C#
+public void RemoveClipInMyAudioPlayer()
+{
+    // Replace MyAudioPlayer with name of your audioPlayer.
+    if (!AudioPlayer.TryGet("MyAudioPlayer", out AudioPlayer player))
+        return;
+
+    player.RemoveClipByName("shot");
+}
+```
+</details>
+
+<details>
+<summary>7. Remove clips by their id.</summary>
+
+```C#
+int lobbyClipId = 0;
+
+// Execute this method via events when server is waiting for players.
+public void OnWaitingForPlayers()
+{
+    AudioPlayer lobbyPlayer = AudioPlayer.CreateOrGet("Lobby", onIntialCreation: (p) =>
+    {
+        p.AddSpeaker("Main", isSpatial: false, maxDistance: 5000f);
+    });
+
+    AudioClipPlayback playback = lobbyPlayer.AddClip("lobby_music", loop: true);
+    lobbyClipId = playback.Id;
+}
+
+// Execute this later...
+public void RemoveClipInLobby()
+{
+    if (!AudioPlayer.TryGet("Lobby", out AudioPlayer player))
+        return;
+
+    player.RemoveClipById(lobbyClipId);
+}
+```
+</details>
+
 ---
 
 ## API Overview
