@@ -1,4 +1,6 @@
-﻿/// <summary>
+﻿using VoiceChat.Playbacks;
+
+/// <summary>
 /// Represents a pool of AudioPlayer instances.
 /// </summary>
 public class AudioPlayerPool : IDisposable
@@ -18,20 +20,62 @@ public class AudioPlayerPool : IDisposable
     {
         _poolName = poolName;
         _maxSize = size;
-        _startControllerIdValue = nextGlobalControllerIdRef; // Record the starting ID for this pool
+        _startControllerIdValue = nextGlobalControllerIdRef;
         
         if (nextGlobalControllerIdRef + size > 256 || size <= 0)
         {
             throw new InvalidOperationException($"Cannot create pool '{poolName}' with size {size}. Controller ID range exceeded or invalid size. Starting global ID: {nextGlobalControllerIdRef}, byte.MaxValue: {byte.MaxValue}. Required IDs: {size}.");
         }
         
-        for (int i = 0; i < size; i++)
+        HashSet<byte> globallyUsedIds = GetGloballyUsedControllerIds();
+        
+        int reservedCount = 0;
+        while (reservedCount < size && nextGlobalControllerIdRef < byte.MaxValue)
         {
-            byte currentIdToReserve = nextGlobalControllerIdRef;
-            _reservedControllerIds.Add(currentIdToReserve);
-            _availableControllerIds.Enqueue(currentIdToReserve);
+            if (!globallyUsedIds.Contains(nextGlobalControllerIdRef))
+            {
+                _reservedControllerIds.Add(nextGlobalControllerIdRef);
+                _availableControllerIds.Enqueue(nextGlobalControllerIdRef);
+                reservedCount++;
+            }
             nextGlobalControllerIdRef++;
         }
+        
+        if (reservedCount < size)
+        {
+            throw new InvalidOperationException($"Cannot reserve {size} controller IDs for pool '{poolName}'. Only {reservedCount} IDs available.");
+        }
+    }
+    
+    private static HashSet<byte> GetGloballyUsedControllerIds()
+    {
+        HashSet<byte> usedIds = new HashSet<byte>();
+        
+        foreach (var instance in SpeakerToyPlaybackBase.AllInstances)
+        {
+            usedIds.Add(instance.ControllerId);
+        }
+        
+        foreach (var id in AudioPlayer.AudioPlayerById.Keys)
+        {
+            usedIds.Add(id);
+        }
+        
+        return usedIds;
+    }
+    
+    private static bool IsControllerIdGloballyAvailable(byte controllerId)
+    {
+        foreach (var instance in SpeakerToyPlaybackBase.AllInstances)
+        {
+            if (instance.ControllerId == controllerId)
+                return false;
+        }
+        
+        if (AudioPlayer.AudioPlayerById.ContainsKey(controllerId))
+            return false;
+        
+        return true;
     }
 
     /// <summary>
@@ -49,14 +93,39 @@ public class AudioPlayerPool : IDisposable
             pooledPlayer = _available.Dequeue();
             pooledPlayer.Activate(playerName);
         }
-        
         else if ((_inUse.Count + _available.Count) < _maxSize && _availableControllerIds.Count > 0)
         {
-            byte controllerId = _availableControllerIds.Dequeue();
+            byte? availableId = null;
+            var tempQueue = new Queue<byte>();
             
-            string internalName = $"{_poolName}_PooledPlayer_ID{controllerId}";
+            while (_availableControllerIds.Count > 0)
+            {
+                byte candidateId = _availableControllerIds.Dequeue();
+                if (IsControllerIdGloballyAvailable(candidateId))
+                {
+                    availableId = candidateId;
+                    break;
+                }
+                else
+                {
+                    tempQueue.Enqueue(candidateId);
+                }
+            }
             
-            var player = CreatePooledPlayer(internalName, controllerId);
+            while (tempQueue.Count > 0)
+            {
+                _availableControllerIds.Enqueue(tempQueue.Dequeue());
+            }
+            
+            if (!availableId.HasValue)
+            {
+                ServerConsole.AddLog($"[AudioPlayerPool] Pool '{_poolName}' has no globally available controller IDs.");
+                return null;
+            }
+            
+            string internalName = $"{_poolName}_PooledPlayer_ID{availableId.Value}";
+            
+            var player = CreatePooledPlayer(internalName, availableId.Value);
             
             pooledPlayer = new PooledAudioPlayer(player, this, playerName);
         }
@@ -77,7 +146,7 @@ public class AudioPlayerPool : IDisposable
     /// <summary>
     /// Returns a player to the pool for reuse.
     /// </summary>
-    internal void Return(PooledAudioPlayer pooledPlayer)
+    public void Return(PooledAudioPlayer pooledPlayer)
     {
         if (_disposed || !_inUse.Contains(pooledPlayer))
             return;
@@ -91,7 +160,7 @@ public class AudioPlayerPool : IDisposable
     /// Returns and destroys a player, freeing its resources and controller ID for potential new player creation.
     /// The player instance is not returned to the available queue.
     /// </summary>
-    internal void ReturnDel(PooledAudioPlayer pooledPlayer)
+    public void ReturnDel(PooledAudioPlayer pooledPlayer)
     {
         if (_disposed || !_inUse.Contains(pooledPlayer))
             return;
@@ -102,9 +171,6 @@ public class AudioPlayerPool : IDisposable
         if (player != null)
         {
             byte controllerId = player.ControllerID;
-            // string playerName = player.Name;
-            // AudioPlayer.AudioPlayerById.Remove(controllerId);
-            // AudioPlayer.AudioPlayerByName.Remove(playerName); 
             
             UnityEngine.Object.Destroy(player.gameObject);
             
@@ -114,10 +180,12 @@ public class AudioPlayerPool : IDisposable
 
     private AudioPlayer CreatePooledPlayer(string internalName, byte controllerId)
     {
-        if (AudioPlayer.AudioPlayerById.ContainsKey(controllerId))
+        if (!IsControllerIdGloballyAvailable(controllerId))
         {
-            ServerConsole.AddLog($"[AudioPlayerPool:{_poolName}] Warning: Controller ID {controllerId} is already in global use (AudioPlayerById) when creating new pooled player '{internalName}'.");
+            ServerConsole.AddLog($"[AudioPlayerPool:{_poolName}] Error: Controller ID {controllerId} is globally in use when creating new pooled player '{internalName}'.");
+            return null;
         }
+
         if (AudioPlayer.AudioPlayerByName.ContainsKey(internalName))
         {
              ServerConsole.AddLog($"[AudioPlayerPool:{_poolName}] Warning: Name '{internalName}' is already in global use (AudioPlayerByName) when creating new pooled player with ID {controllerId}.");
