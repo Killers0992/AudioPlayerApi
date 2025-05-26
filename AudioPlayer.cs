@@ -132,7 +132,7 @@ public class AudioPlayer : MonoBehaviour
     /// <summary>
     /// Gets the name of the AudioPlayer instance.
     /// </summary>
-    public string Name { get; private set; }
+    public string Name { get; internal set; }
 
     /// <summary>
     /// Destroys this audioplayer when all clips played.
