@@ -1,7 +1,7 @@
 /// <summary>
 /// Handles the playback of audio clips, including looping, volume control, and PCM data handling.
 /// </summary>
-public class AudioClipPlayback
+public class AudioClipPlayback : IDisposable
 {
     /// <summary>
     /// Size of audio packets to be processed in samples.
@@ -44,6 +44,18 @@ public class AudioClipPlayback
     /// Gets the unique identifier of this playback instance.
     /// </summary>
     public int Id { get; }
+
+    /// <summary>
+    /// Indicates whether this playback instance represents a live stream
+    /// instead of a standard audio clip.
+    /// </summary>
+    public bool IsStream { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <see cref="StreamPlayback"/> source that provides
+    /// the live audio stream data for this playback instance.
+    /// </summary>
+    public StreamPlayback StreamSource { get; set; }
 
     /// <summary>
     /// Gets the name of the audio clip being played.
@@ -140,6 +152,20 @@ public class AudioClipPlayback
     /// <returns>True if the sample was successfully prepared; otherwise, false.</returns>
     public bool PrepareSample()
     {
+        if (IsStream && StreamSource != null)
+        {
+            NextSample = new float[PacketSize];
+            int got = StreamSource.Read(NextSample, 0, NextSample.Length);
+
+            if (got <= 0)
+                return false;
+
+            if (got < NextSample.Length)
+                Array.Clear(NextSample, got, NextSample.Length - got);
+
+            return true;
+        }
+
         bool destroy = false;
 
         NextSample = ReadPcmChunk(ref destroy);
@@ -228,7 +254,6 @@ public class AudioClipPlayback
                 float sample = playbacks[j].NextSample[i] * playbacks[j].Volume;
                 mixedSample += sample;
                 invalid = false;
-
             }
 
             if (mixedSample > 1.0f)
@@ -244,5 +269,11 @@ public class AudioClipPlayback
             return null;
 
         return _mixedData;
+    }
+
+    public void Dispose()
+    {
+        if (StreamSource != null)
+            StreamSource.Stop();
     }
 }

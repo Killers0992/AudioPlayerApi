@@ -99,6 +99,8 @@ public class AudioPlayer : MonoBehaviour
     /// <returns>True if the audio player is found; otherwise, false.</returns>
     public static bool TryGet(string name, out AudioPlayer player) => AudioPlayerByName.TryGetValue(name, out player);
 
+    private double _lastSendTime;
+
     /// <summary>
     /// Internal buffer for mixed PCM audio data.
     /// </summary>
@@ -197,11 +199,46 @@ public class AudioPlayer : MonoBehaviour
     }
 
     /// <summary>
+    /// Adds a new live audio stream and registers it in the playback system.
+    /// </summary>
+    /// <param name="url">
+    /// The URL of the live audio stream to play.
+    /// </param>
+    /// <param name="name">
+    /// The name to associate with the stream. Defaults to "RadioStream" if not specified.
+    /// </param>
+    /// <returns>
+    /// A <see cref="StreamPlayback"/> instance representing the created live stream.
+    /// </returns>
+    public StreamPlayback AddLiveStream(string url, float volume = 1f, string name = "RadioStream")
+    {
+        var stream = new StreamPlayback(url, name);
+        int newId = GetNextId;
+
+        var wrapper = new AudioClipPlayback(newId, name, volume, true, false)
+        {
+            IsStream = true,
+            StreamSource = stream
+        };
+
+        ClipsById.Add(newId, wrapper);
+        return stream;
+    }
+
+    /// <summary>
     /// Removes clip by their identifier.
     /// </summary>
     /// <param name="clipId">The clip identifier.</param>
     /// <returns>If successfuly removed.</returns>
-    public bool RemoveClipById(int clipId) => ClipsById.Remove(clipId);
+    public bool RemoveClipById(int clipId)
+    {
+        if (!ClipsById.TryGetValue(clipId, out AudioClipPlayback clip))
+            return false;
+
+        clip.Dispose();
+
+        return ClipsById.Remove(clipId);
+    }
 
     /// <summary>
     /// Removes clip by their name. ( remember that if theres multiple playing clips with same name all will be removed )
@@ -223,6 +260,10 @@ public class AudioPlayer : MonoBehaviour
 
         foreach(int id in idsToDestroy)
         {
+            if (!ClipsById.TryGetValue(id, out AudioClipPlayback clip))
+                continue;
+
+            clip.Dispose();
             ClipsById.Remove(id);
         }
 
@@ -335,12 +376,19 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     public void Destroy() => UnityEngine.Object.Destroy(gameObject);
 
-    /// <summary>
-    /// Called when the component is initialized.
-    /// </summary>
-    void Awake()
+    void Update()
     {
-        InvokeRepeating(nameof(SendAudioData), 0, (float)AudioClipPlayback.PacketSize / AudioClipPlayback.SamplingRate);
+        double packetInterval = (double)AudioClipPlayback.PacketSize / AudioClipPlayback.SamplingRate;
+        double now = Time.unscaledTimeAsDouble;
+
+        if (_lastSendTime == 0)
+            _lastSendTime = now;
+
+        while (now - _lastSendTime >= packetInterval)
+        {
+            SendAudioData();
+            _lastSendTime += packetInterval;
+        }
     }
 
     /// <summary>
@@ -360,6 +408,9 @@ public class AudioPlayer : MonoBehaviour
         bool anyRemoved = false;
         foreach (int clipId in clipsToDestroy)
         {
+            if (ClipsById.TryGetValue(clipId, out AudioClipPlayback clip))
+                clip.Dispose();
+
             ClipsById.Remove(clipId);
             anyRemoved = true;
         }
@@ -412,6 +463,13 @@ public class AudioPlayer : MonoBehaviour
     {
         if (IsInvoking(nameof(SendAudioData)))
             CancelInvoke(nameof(SendAudioData));
+
+        foreach(var clip in ClipsById.Values)
+        {
+            clip.Dispose();
+        }
+
+        ClipsById.Clear();
 
         foreach (var speaker in SpeakersByName.Values)
         {
