@@ -1,4 +1,5 @@
 using Utils.Networking;
+using VoiceChat.Playbacks;
 
 /// <summary>
 /// Represents an audio player that can manage and play multiple audio clips.
@@ -37,16 +38,64 @@ public class AudioPlayer : MonoBehaviour
 
         if (targetId == 255)
         {
+            HashSet<byte> usedIds = new HashSet<byte>();
+        
+            foreach (var instance in SpeakerToyPlaybackBase.AllInstances)
+            {
+                usedIds.Add(instance.ControllerId);
+            }
+            
+            foreach (var existingPlayer in AudioPlayerById.Values)
+            {
+                usedIds.Add(existingPlayer.ControllerID);
+            }
+            
             for (byte x = 0; x < byte.MaxValue; x++)
             {
-                if (AudioPlayerById.ContainsKey(x))
+                if (usedIds.Contains(x))
                     continue;
 
                 targetId = x;
-                AudioPlayerById.Add(x, player);
                 break;
             }
+        
+            if (targetId == 255)
+            {
+                ServerConsole.AddLog($"[AudioPlayer] No available controller IDs!");
+                Destroy(go);
+                return null;
+            }
+        
+            AudioPlayerById.Add(targetId, player);
         }
+        else
+        {
+            bool idInUse = false;
+            
+            foreach (var instance in SpeakerToyPlaybackBase.AllInstances)
+            {
+                if (instance.ControllerId == controllerId)
+                {
+                    idInUse = true;
+                    break;
+                }
+            }
+            
+            if (!idInUse && AudioPlayerById.ContainsKey(controllerId))
+            {
+                idInUse = true;
+            }
+        
+            if (idInUse)
+            {
+                ServerConsole.AddLog($"[AudioPlayer] Controller ID {controllerId} is already in use!");
+                Destroy(go);
+                return null;
+            }
+        
+            AudioPlayerById.Add(controllerId, player);
+        }
+
 
         player.ControllerID = targetId;
         player.Name = name;
@@ -134,7 +183,7 @@ public class AudioPlayer : MonoBehaviour
     /// <summary>
     /// Gets the name of the AudioPlayer instance.
     /// </summary>
-    public string Name { get; private set; }
+    public string Name { get; internal set; }
 
     /// <summary>
     /// Destroys this audioplayer when all clips played.
