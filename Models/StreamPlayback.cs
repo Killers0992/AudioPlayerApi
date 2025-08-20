@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using PlayerRoles.FirstPersonControl;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
@@ -13,6 +14,8 @@ public class StreamPlayback
     public string Name { get; }
     public bool IsActive { get; private set; } = true;
 
+    public bool IsInitializing { get; set; } = true;
+
     public StreamPlayback(string url, string name)
     {
         Url = url;
@@ -21,13 +24,27 @@ public class StreamPlayback
         _cts = new CancellationTokenSource();
         Task.Run(async () =>
         {
+            await Ffmpeg.InitializeFfmpegAsync();
+
             try
             {
                 await RunFfmpegPipeline(_cts.Token);
             }
             catch (Win32Exception win32ex)
-            { 
-                ServerConsole.AddLog($"[AudioPlayer] Failed to run FFmpegPipeline, ffmpeg most likely is not installed! ( Code {win32ex.NativeErrorCode} )");
+            {
+                switch (win32ex.NativeErrorCode)
+                {
+                    // Access denied
+                    case 5:
+                        ServerConsole.AddLog($"[AudioPlayer] FFmpeg {Ffmpeg.FfmpegPath} access denied, please check permissions on file!");
+                        break;
+                    case 2:
+                        ServerConsole.AddLog($"[AudioPlayer] FFmpeg {Ffmpeg.FfmpegPath} not found, please ensure it is installed and the path is correct!");
+                        break;
+                    default:
+                        ServerConsole.AddLog($"[AudioPlayer] Failed to run FFmpegPipeline, ffmpeg most likely is not installed! ( Code {win32ex.NativeErrorCode} )\n{win32ex}");
+                        break;
+                }
             }
             catch (Exception ex)
             {
@@ -40,7 +57,7 @@ public class StreamPlayback
     {
         ProcessStartInfo psi = new ProcessStartInfo
         {
-            FileName = "ffmpeg",
+            FileName = Ffmpeg.FfmpegPath,
             Arguments = $"-hide_banner -loglevel error -i \"{Url}\" -vn -ac 1 -ar 48000 -c:a libvorbis -f ogg pipe:1",
             RedirectStandardOutput = true,
             UseShellExecute = false,
@@ -92,6 +109,8 @@ public class StreamPlayback
                             Thread.Sleep(10);
                             continue;
                         }
+
+                        IsInitializing = false;
 
                         for (int i = 0; i < got; i++)
                             _pcmQueue.Enqueue(temp[i]);

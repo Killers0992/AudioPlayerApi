@@ -154,6 +154,9 @@ public class AudioClipPlayback : IDisposable
     {
         if (IsStream && StreamSource != null)
         {
+            if (StreamSource.IsInitializing)
+                return true;
+
             NextSample = new float[PacketSize];
             int got = StreamSource.Read(NextSample, 0, NextSample.Length);
 
