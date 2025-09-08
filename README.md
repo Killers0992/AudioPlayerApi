@@ -247,6 +247,7 @@ public void RemoveClipInLobby()
 #### Methods
 
 - `AddClip(string clipName, float volume = 1f, bool loop = false, bool destroyOnEnd = true)`: Adds a new audio clip to the player.
+- `AddLiveStream(string url, float volume = 1f, string name = "RadioStream")`: Adds a live stream to the player.
 - `RemoveAllClips()`: Removes all playing clips.
 - `TryGetClip(int clipId, ...)`: Tries to get specific clip by unique identifier.
 - `AddSpeaker(string name, ...)`: Adds a new speaker to the player.
