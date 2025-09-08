@@ -108,7 +108,8 @@ public class AudioClipStorage
                     channels = reader.Channels;
 
                     samples = new float[reader.TotalSamples * channels];
-                    reader.ReadSamples(samples);
+
+                    reader.ReadSamples(samples, 0, samples.Length);
                 }
                 break;
             default:
