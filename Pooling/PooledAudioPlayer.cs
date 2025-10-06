@@ -5,7 +5,7 @@ public class PooledAudioPlayer
 {
     private readonly AudioPlayerPool _pool;
     private readonly string _internalName;
-    private Vector3 _hiddenPosition = new Vector3(999, 999, 999);
+    private static readonly Vector3 _hiddenPosition = new Vector3(999, 999, 999);
     private bool _isReturning = false;
     
     public AudioPlayer Player { get; private set; }
@@ -68,6 +68,7 @@ public class PooledAudioPlayer
     public void Return()
     {
         if (_isReturning) return;
+        _isReturning = true;
         _pool.Return(this);
     }
 
@@ -132,7 +133,7 @@ public class PooledAudioPlayer
 
                 if (!allClipsWillEnd)
                 {
-                    foreach (var clip in Player.ClipsById.Values.ToList())
+                    foreach (var clip in Player.ClipsById.Values)
                     {
                         if (clip.Loop)
                         {
