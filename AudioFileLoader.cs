@@ -13,7 +13,8 @@ public static class AudioFileLoader
             return Array.Empty<float>();
         }
 
-        Task.Run(async () => await Ffmpeg.InitializeFfmpegAsync()).GetAwaiter().GetResult();
+        // I think this line can kill the server, but i idk how to check ffmpeg. On server start mb
+        Ffmpeg.InitializeFfmpegAsync().GetAwaiter().GetResult();
 
         try
         {
@@ -26,55 +27,60 @@ public static class AudioFileLoader
         }
     }
     
+    
     // this method I writed with gpt because I am dumb and can't understand simple things
     private static float[] ConvertToRawPcm(string filePath, int sampleRate, int channels)
     {
-        ProcessStartInfo psi = new ProcessStartInfo
+        var psi = new ProcessStartInfo
         {
             FileName = Ffmpeg.FfmpegPath,
-            Arguments = $"-hide_banner -loglevel error -i \"{filePath}\" -vn -ac {channels} -ar {sampleRate} -f f32le pipe:1",
+            Arguments = $"-hide_banner -nostats -loglevel error -i \"{filePath}\" -vn -ac {channels} -ar {sampleRate} -f f32le pipe:1",
             RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            RedirectStandardError = false,
             UseShellExecute = false,
             CreateNoWindow = true
         };
 
-        using (Process process = Process.Start(psi))
+        using var process = new Process { StartInfo = psi };
+        try
         {
-            if (process == null)
+            if (!process.Start())
             {
                 ServerConsole.AddLog("[AudioFileLoader] Failed to start FFmpeg process");
                 return Array.Empty<float>();
             }
-        
-            var errorTask = process.StandardError.ReadToEndAsync();
-            
-            using (MemoryStream ms = new MemoryStream())
+
+            byte[] pcmBytes;
+            using (var ms = new MemoryStream())
             {
                 process.StandardOutput.BaseStream.CopyTo(ms);
-                process.WaitForExit();
-                
-                string errors = errorTask.Result;
-                if (!string.IsNullOrEmpty(errors))
+                if (!process.WaitForExit(10000)) 
                 {
-                    ServerConsole.AddLog($"[AudioFileLoader] FFmpeg warnings/errors: {errors}");
-                }
-
-                if (process.ExitCode != 0)
-                {
-                    ServerConsole.AddLog($"[AudioFileLoader] FFmpeg exited with code {process.ExitCode}");
+                    try { process.Kill(); } catch { /* ignore */ }
+                    ServerConsole.AddLog("[AudioFileLoader] FFmpeg process timeout");
                     return Array.Empty<float>();
                 }
 
-                byte[] pcmBytes = ms.ToArray();
-                int sampleCount = pcmBytes.Length / 4;
-                float[] samples = new float[sampleCount];
-                Buffer.BlockCopy(pcmBytes, 0, samples, 0, pcmBytes.Length);
-
-                ServerConsole.AddLog($"[AudioFileLoader] Loaded {filePath}: {sampleCount} samples, {sampleCount / (float)(sampleRate * channels):F2}s duration");
-            
-                return samples;
+                pcmBytes = ms.ToArray();
             }
+
+            if (process.ExitCode != 0)
+            {
+                ServerConsole.AddLog($"[AudioFileLoader] FFmpeg exited with code {process.ExitCode}");
+                return Array.Empty<float>();
+            }
+
+            int sampleCount = pcmBytes.Length / 4;
+            var samples = new float[sampleCount];
+            Buffer.BlockCopy(pcmBytes, 0, samples, 0, pcmBytes.Length);
+
+            ServerConsole.AddLog($"[AudioFileLoader] Loaded {filePath}: {sampleCount} samples, {sampleCount / (float)(sampleRate * channels):F2}s duration");
+            return samples;
+        }
+        catch
+        {
+            try { if (!process.HasExited) process.Kill(); } catch { }
+            throw;
         }
     }
 }
