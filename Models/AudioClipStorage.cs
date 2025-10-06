@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using AudioPlayerApi;
 
 /// <summary>
 /// Manages the storage and loading of audio clips for playback.
@@ -120,6 +121,50 @@ public class AudioClipStorage
         // Add the loaded clip data to the collection.
         AudioClips.Add(name, new AudioClipData(name, sampleRate, channels, samples));
         return true;
+    }
+    /// <summary>
+    /// Loads an audio file, converts it to PCM, and adds it to the clip storage and player.
+    /// </summary>
+    /// <param name="player">The AudioPlayer instance</param>
+    /// <param name="filePath">Path to the audio file</param>
+    /// <param name="clipName">Name to assign to the clip (if null, uses filename)</param>
+    /// <param name="volume">Playback volume</param>
+    /// <param name="loop">Whether to loop the clip</param>
+    /// <param name="destroyOnEnd">Whether to destroy after playback</param>
+    /// <returns>AudioClipPlayback instance or null if loading failed</returns>
+    public static bool LoadClipAny(
+        string filePath,
+        string clipName)
+    {
+        if (string.IsNullOrEmpty(clipName))
+            clipName = Path.GetFileNameWithoutExtension(filePath);
+        
+        EnsureFfmpegInitialized();
+        
+        float[] samples = AudioFileLoader.LoadAudioFile(
+            filePath,
+            AudioClipPlayback.SamplingRate,
+            AudioClipPlayback.Channels);
+
+        if (samples.Length == 0)
+        {
+            ServerConsole.AddLog($"[AudioPlayer] Failed to load audio file: {filePath}");
+            return false;
+        }
+        
+        if (!AudioClips.ContainsKey(clipName))
+        {
+            AudioClips[clipName] = new AudioClipData(clipName, AudioClipPlayback.SamplingRate,
+                AudioClipPlayback.Channels, samples);
+            ServerConsole.AddLog($"[AudioPlayer] Added clip '{clipName}' to storage");
+        }
+        
+        return true;
+    }
+    private static void EnsureFfmpegInitialized()
+    {
+        if (!File.Exists(Ffmpeg.FfmpegPath))
+            throw new InvalidOperationException("FFmpeg not initialized. Call InitializeFfmpegAsync at startup.");
     }
 
     /// <summary>
