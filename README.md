@@ -1,5 +1,6 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Killers0992/AudioPlayer/total?label=Downloads&labelColor=2e343e&color=00FFFF&style=for-the-badge)
 [![Discord](https://img.shields.io/discord/1216429195232673964?label=Discord&labelColor=2e343e&color=00FFFF&style=for-the-badge)](https://discord.gg/czQCAsDMHa)
+[![NuGet Version](https://img.shields.io/nuget/v/AudioPlayerAPI?labelColor=2e343e\&color=00FFFF\&style=for-the-badge)](https://www.nuget.org/packages/AudioPlayerAPI)
 # AudioPlayerApi
 
 **AudioPlayerApi** is a dependency for plugins that provides advanced capabilities for managing and playing audio clips, complete with support for spatial audio and multiple speakers. This plugin is designed for use in SCP: SL Dedicated servers.
