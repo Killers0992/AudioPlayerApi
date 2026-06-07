@@ -157,6 +157,12 @@ public class AudioClipPlayback : IDisposable
     {
         if (IsStream && StreamSource != null)
         {
+            if (IsPaused)
+            {
+                NextSample = null;
+                return true;
+            }
+            
             if (StreamSource.IsInitializing)
                 return true;
 
