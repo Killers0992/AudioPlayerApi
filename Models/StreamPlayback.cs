@@ -15,6 +15,19 @@ public class StreamPlayback
     public bool IsActive { get; private set; } = true;
 
     public bool IsInitializing { get; set; } = true;
+    public TimeSpan Duration { get; private set; } = TimeSpan.Zero;
+
+    public TimeSpan Position
+    {
+        get
+        {
+            double duration = (double)_totalReadPosition / (AudioClipPlayback.SamplingRate * AudioClipPlayback.Channels);
+
+            return TimeSpan.FromSeconds(duration);
+        }
+    }
+    
+    private int _totalReadPosition;
 
     public StreamPlayback(string url, string name)
     {
@@ -28,6 +41,7 @@ public class StreamPlayback
 
             try
             {
+                await GetDuration();
                 await RunFfmpegPipeline(_cts.Token);
             }
             catch (Win32Exception win32ex)
@@ -51,6 +65,35 @@ public class StreamPlayback
                 ServerConsole.AddLog($"[AudioPlayer] Error in live stream playback: {ex}");
             }
         }, _cts.Token);
+    }
+    
+    async Task GetDuration()
+    {
+        ProcessStartInfo psi = new ProcessStartInfo
+        {
+            FileName = Ffmpeg.FfprobePath,
+            Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{Url}\"",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using (Process p = Process.Start(psi))
+        {
+            ServerConsole.AddLog($"[AudioPlayer] Get duration for {Url}");
+            string output = (await p.StandardOutput.ReadToEndAsync()).Trim();
+            p.WaitForExit();
+
+            if (double.TryParse(output, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out double seconds))
+            {
+                Duration = TimeSpan.FromSeconds(seconds);
+                return;
+            }
+        }
+        ServerConsole.AddLog($"[AudioPlayer] Failed to get duration for {Url}");
+        Duration = TimeSpan.Zero;
+        return;
     }
 
     async Task RunFfmpegPipeline(CancellationToken ct)
@@ -132,6 +175,7 @@ public class StreamPlayback
             buffer[offset + written] = sample;
             written++;
         }
+        _totalReadPosition += written;
         return written;
     }
     

@@ -191,6 +191,24 @@ public class AudioPlayer : MonoBehaviour
     public bool DestroyWhenAllClipsPlayed { get; set; }
 
     /// <summary>
+    /// Set all clips ready to destroy.
+    /// </summary>
+    public bool ReadyForDestroy
+    {
+        get;
+        set
+        {
+            if (field == value)
+                return;
+            foreach (AudioClipPlayback playback in ClipsById.Values)
+            {
+                playback.ReadyForDestroyed = value;
+            }
+            field = value;
+        }
+    }
+
+    /// <summary>
     /// Sends sounds globally to everyone connected to server.
     /// </summary>
     public bool SendSoundGlobally { get; set; } = true;
@@ -234,14 +252,14 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     /// <param name="clipName">The name of the audio clip.</param>
     /// <param name="volume">The volume of the clip. Default is 1f.</param>
-    /// <param name="loop">Whether the clip should loop. Default is false.</param>
-    /// <param name="destroyOnEnd">Whether the clip should be destroyed after playback ends. Default is true.</param>
+    /// <param name="playbackMode">The playback mode of the clip. Default is PlayOnce.</param>
     /// <returns>A new <see cref="AudioClipPlayback"/> instance.</returns>
-    public AudioClipPlayback AddClip(string clipName, float volume = 1f, bool loop = false, bool destroyOnEnd = true)
+    public AudioClipPlayback AddClip(string clipName, float volume = 1f, PlaybackMode playbackMode = PlaybackMode.PlayOnce)
     {
         int newId = GetNextId;
 
-        AudioClipPlayback clip = new AudioClipPlayback(newId, clipName, volume, loop, destroyOnEnd);
+        AudioClipPlayback clip = new AudioClipPlayback(newId, clipName, volume, playbackMode);
+        clip.ReadyForDestroyed = ReadyForDestroy;
         ClipsById.Add(newId, clip);
 
         return clip;
@@ -253,25 +271,30 @@ public class AudioPlayer : MonoBehaviour
     /// <param name="url">
     /// The URL of the live audio stream to play.
     /// </param>
-    /// <param name="name">
+    /// <param name="volume">The volume of the clip. Default is 1f.
+    /// </param>
+    /// <param name="clipName">
     /// The name to associate with the stream. Defaults to "RadioStream" if not specified.
     /// </param>
+    /// <param name="playbackMode">The playback mode of the clip. Default is PlayOnce.
+    /// </param>
     /// <returns>
-    /// A <see cref="StreamPlayback"/> instance representing the created live stream.
+    /// A <see cref="AudioClipPlayback"/> instance representing the created live stream.
     /// </returns>
-    public StreamPlayback AddLiveStream(string url, float volume = 1f, string name = "RadioStream")
+    public AudioClipPlayback AddLiveStream(string url, float volume = 1f, string clipName = "RadioStream", PlaybackMode playbackMode = PlaybackMode.PlayOnce)
     {
-        var stream = new StreamPlayback(url, name);
+        var stream = new StreamPlayback(url, clipName);
         int newId = GetNextId;
 
-        var wrapper = new AudioClipPlayback(newId, name, volume, true, false)
+        var wrapper = new AudioClipPlayback(newId, clipName, volume, playbackMode)
         {
             IsStream = true,
             StreamSource = stream
         };
+        wrapper.ReadyForDestroyed = ReadyForDestroy;
 
         ClipsById.Add(newId, wrapper);
-        return stream;
+        return wrapper;
     }
 
     /// <summary>
@@ -325,6 +348,8 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     public void RemoveAllClips()
     {
+        foreach(AudioClipPlayback clip in ClipsById.Values)
+            clip.Dispose();
         ClipsById.Clear();
     }
 
@@ -441,6 +466,12 @@ public class AudioPlayer : MonoBehaviour
     }
 
     /// <summary>
+    /// Called when a clip ends.
+    /// AudioClipPlayback is instance of removed clip.
+    /// </summary>
+    public Action<AudioClipPlayback> OnClipEnd;
+
+    /// <summary>
     /// Sends mixed audio data to the network.
     /// </summary>
     void SendAudioData()
@@ -458,10 +489,19 @@ public class AudioPlayer : MonoBehaviour
         foreach (int clipId in clipsToDestroy)
         {
             if (ClipsById.TryGetValue(clipId, out AudioClipPlayback clip))
+            {
                 clip.Dispose();
-
-            ClipsById.Remove(clipId);
-            anyRemoved = true;
+                ClipsById.Remove(clipId);
+                try
+                {
+                    OnClipEnd?.Invoke(clip);
+                }
+                catch (Exception e)
+                {
+                    ServerConsole.AddLog($"[AudioPlayer] Failed to invoke OnClipEnd for clip {clip.Clip}:\n{e}");
+                }
+                anyRemoved = true;
+            }
         }
 
         if (anyRemoved)

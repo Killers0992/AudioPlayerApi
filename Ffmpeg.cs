@@ -18,6 +18,11 @@ public class Ffmpeg
         RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? Path.Combine(FfmpegDir, "ffmpeg.exe")
             : Path.Combine(FfmpegDir, "ffmpeg-master-latest-linux64-gpl", "bin", "ffmpeg");
+    
+    public static string FfprobePath =>
+        RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? Path.Combine(FfmpegDir, "ffprobe.exe")
+            : Path.Combine(FfmpegDir, "ffmpeg-master-latest-linux64-gpl", "bin", "ffprobe");
 
     /// <summary>
     /// Ensures that FFmpeg is downloaded and ready to use.
@@ -26,7 +31,7 @@ public class Ffmpeg
     {
         Directory.CreateDirectory(FfmpegDir);
 
-        if (File.Exists(FfmpegPath))
+        if (File.Exists(FfmpegPath) && File.Exists(FfprobePath))
             return;
 
         string url = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WindowsUrl : LinuxUrl;
@@ -80,14 +85,19 @@ public class Ffmpeg
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            System.IO.Compression.ZipFile.ExtractToDirectory(archivePath, FfmpegDir);
+            var temporaryDir = Path.Combine(FfmpegDir, "ffmpeg_zip");
+            Directory.CreateDirectory(temporaryDir);
+            System.IO.Compression.ZipFile.ExtractToDirectory(archivePath, temporaryDir);
 
-            var exe = Directory.GetFiles(FfmpegDir, "ffmpeg.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (exe != null)
-                File.Copy(exe, FfmpegPath, true);
+            var exe1 = Directory.GetFiles(temporaryDir, "ffmpeg.exe", SearchOption.AllDirectories).FirstOrDefault();
+            var exe2 = Directory.GetFiles(temporaryDir, "ffprobe.exe", SearchOption.AllDirectories).FirstOrDefault();
+            if (exe1 != null)
+                File.Copy(exe1, FfmpegPath, true);
+            if (exe2 != null)
+                File.Copy(exe2, FfprobePath, true);
 
             File.Delete(archivePath);
-            File.Delete(FfmpegDir);
+            Directory.Delete(temporaryDir, true);
         }
         else
         {
