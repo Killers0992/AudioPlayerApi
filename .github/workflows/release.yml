@@ -5,7 +5,6 @@ on:
 
 env:
   NET_FRAMEWORK_VERSION: "net48"
-  PROJECT_NAME: "AudioPlayerApi"
   ASESEMBLY_NAME: "AudioPlayerApi"
   SL_REFERENCES: "${{ github.workspace }}/References"
   UNITY_REFERENCES: "${{ github.workspace }}/References"
@@ -38,4 +37,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Agents
-        path: ${{ github.workspace }}/${{ env.PROJECT_NAME }}/bin/Release/${{ env.NET_FRAMEWORK_VERSION }}/${{ env.ASESEMBLY_NAME }}.dll
+        path: ${{ github.workspace }}/bin/Release/${{ env.NET_FRAMEWORK_VERSION }}/${{ env.ASESEMBLY_NAME }}.dll
