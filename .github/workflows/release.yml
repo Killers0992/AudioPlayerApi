@@ -25,11 +25,6 @@ jobs:
         branch: 'public'
         filesToDownload: 'Assembly-CSharp.dll,Mirror.dll,UnityEngine.CoreModule.dll'
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v2
-      with:
-        dotnet-version: 8.0.x
-        
     - name: Build
       run: dotnet build --configuration Release
       
