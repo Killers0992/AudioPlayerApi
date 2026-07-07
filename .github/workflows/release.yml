@@ -16,7 +16,7 @@ jobs:
       contents: write
     steps:
     - name: Checkout main repository.
-      uses: actions/checkout
+      uses: actions/checkout@v7
       
     - name: Download SCP SL References
       uses: killers0992/scpsl.downloadfiles@master
@@ -28,7 +28,7 @@ jobs:
       run: dotnet build --configuration Release
       
     - name: Upload
-      uses: actions/upload-artifact
+      uses: actions/upload-artifact@v7
       with:
         name: AudioPlayerApi
         path: ${{ github.workspace }}/bin/Release/${{ env.NET_FRAMEWORK_VERSION }}/${{ env.ASESEMBLY_NAME }}.dll
