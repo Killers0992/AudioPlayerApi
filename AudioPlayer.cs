@@ -171,6 +171,11 @@ public class AudioPlayer : MonoBehaviour
     private List<int> clipsToDestroy = new List<int>();
 
     /// <summary>
+    /// Gets a value indicating whether the object has been destroyed.
+    /// </summary>
+    public bool IsDestroyed { get; private set; }
+
+    /// <summary>
     /// A dictionary of active audio clips indexed by their IDs.
     /// </summary>
     public Dictionary<int, AudioClipPlayback> ClipsById = new Dictionary<int, AudioClipPlayback>();
@@ -425,6 +430,19 @@ public class AudioPlayer : MonoBehaviour
     /// </summary>
     public void Destroy() => UnityEngine.Object.Destroy(gameObject);
 
+    void Awake()
+    {
+        ReferenceHub.OnPlayerRemoved += OnPlayerRemoved;
+    }
+
+    void OnPlayerRemoved(ReferenceHub hub)
+    {
+        if (!Owners.Contains(hub))
+            return;
+
+        Owners?.Remove(hub);
+    }
+
     void Update()
     {
         double packetInterval = (double)AudioClipPlayback.PacketSize / AudioClipPlayback.SamplingRate;
@@ -492,11 +510,12 @@ public class AudioPlayer : MonoBehaviour
             return;
         }
 
-        if (SendSoundGlobally)
+
+        if (Owners.Count == 0 && SendSoundGlobally)
         {
             NetworkServer.SendToReady(msg);
         }
-        else if (Owners.Count != 0)
+        else if (Owners.Count > 0)
         {
             foreach (ReferenceHub owner in Owners)
             {
@@ -508,8 +527,10 @@ public class AudioPlayer : MonoBehaviour
     /// <summary>
     /// Called when the component is destroyed.
     /// </summary>
-    void OnDestroy()
+    private void OnDestroy()
     {
+        ReferenceHub.OnPlayerRemoved -= OnPlayerRemoved;
+
         if (IsInvoking(nameof(SendAudioData)))
             CancelInvoke(nameof(SendAudioData));
 
@@ -525,13 +546,12 @@ public class AudioPlayer : MonoBehaviour
             speaker.Destroy();
         }
 
-        SpeakersByName = null;
-
         AudioPlayerById.Remove(ControllerID);
-
         AudioPlayerByName.Remove(Name);
 
         encoder?.Dispose();
         encoder = null;
+
+        IsDestroyed = true;
     }
 }

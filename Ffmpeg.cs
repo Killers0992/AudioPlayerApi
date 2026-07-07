@@ -111,7 +111,7 @@ public class Ffmpeg
     {
         using (Stream xzStream = File.OpenRead(archivePath))
         using (var decompressedStream = new XZStream(xzStream))
-        using (var reader = TarReader.Open(decompressedStream))
+        using (var reader = TarReader.OpenReader(decompressedStream))
         {
             reader.WriteAllToDirectory(destination, new ExtractionOptions
             {

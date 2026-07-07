@@ -109,7 +109,7 @@
 
     void OnDestroy()
     {
-        if (Owner == null)
+        if (Owner == null || Owner.IsDestroyed)
             return;
 
         Owner.SpeakersByName.Remove(Name);

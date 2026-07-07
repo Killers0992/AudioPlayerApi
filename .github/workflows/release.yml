@@ -1,0 +1,41 @@
+name: Build Release
+
+on: 
+  workflow_dispatch:
+
+env:
+  NET_FRAMEWORK_VERSION: "net48"
+  PROJECT_NAME: "AudioPlayerApi"
+  ASESEMBLY_NAME: "AudioPlayerApi"
+  SL_REFERENCES: "${{ github.workspace }}/References"
+  UNITY_REFERENCES: "${{ github.workspace }}/References"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout main repository.
+      uses: actions/checkout@v4
+      
+
+    - name: Download SCP SL References
+      uses: killers0992/scpsl.downloadfiles@master
+      with:
+        branch: 'public'
+        filesToDownload: 'Assembly-CSharp.dll,Mirror.dll,UnityEngine.CoreModule.dll'
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 8.0.x
+        
+    - name: Build
+      run: dotnet build --configuration Release
+      
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: Agents
+        path: ${{ github.workspace }}/${{ env.PROJECT_NAME }}/bin/Release/${{ env.NET_FRAMEWORK_VERSION }}/${{ env.ASESEMBLY_NAME }}.dll
