@@ -18,7 +18,6 @@ jobs:
     - name: Checkout main repository.
       uses: actions/checkout@v4
       
-
     - name: Download SCP SL References
       uses: killers0992/scpsl.downloadfiles@master
       with:
@@ -31,5 +30,5 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: Agents
+        name: AudioPlayerApi
         path: ${{ github.workspace }}/bin/Release/${{ env.NET_FRAMEWORK_VERSION }}/${{ env.ASESEMBLY_NAME }}.dll
