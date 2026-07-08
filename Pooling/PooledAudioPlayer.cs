@@ -5,7 +5,7 @@ public class PooledAudioPlayer
 {
     private readonly AudioPlayerPool _pool;
     private readonly string _internalName;
-    private Vector3 _hiddenPosition = new Vector3(999, 999, 999);
+    private static readonly Vector3 _hiddenPosition = new Vector3(999, 999, 999);
     private bool _isReturning = false;
     
     public AudioPlayer Player { get; private set; }
@@ -68,6 +68,7 @@ public class PooledAudioPlayer
     public void Return()
     {
         if (_isReturning) return;
+        _isReturning = true;
         _pool.Return(this);
     }
 
@@ -116,41 +117,48 @@ public class PooledAudioPlayer
 
     private System.Collections.IEnumerator MonitorClipsAndReturn(bool destroy)
     {
-        while (Player.ClipsById.Count > 0)
+        try
         {
-            bool allClipsWillEnd = true;
-            foreach (var clip in Player.ClipsById.Values)
+            while (Player.ClipsById.Count > 0)
             {
-                if (clip.Loop && clip.DestroyOnEnd == false)
+                bool allClipsWillEnd = true;
+                foreach (var clip in Player.ClipsById.Values)
                 {
-                    allClipsWillEnd = false;
-                    break;
-                }
-            }
-            
-            if (!allClipsWillEnd)
-            {
-                foreach (var clip in Player.ClipsById.Values.ToList())
-                {
-                    if (clip.Loop)
+                    if (clip.Loop && clip.DestroyOnEnd == false)
                     {
-                        clip.Loop = false;
+                        allClipsWillEnd = false;
+                        break;
                     }
                 }
+
+                if (!allClipsWillEnd)
+                {
+                    foreach (var clip in Player.ClipsById.Values)
+                    {
+                        if (clip.Loop)
+                        {
+                            clip.Loop = false;
+                        }
+                    }
+                }
+
+                yield return new WaitForSeconds(0.5f);
             }
-            
-            yield return new WaitForSeconds(0.1f);
+
+            _isReturning = false;
+
+            if (destroy)
+            {
+                ReturnDel();
+            }
+            else
+            {
+                Return();
+            }
         }
-        
-        _isReturning = false;
-        
-        if (destroy)
+        finally
         {
-            ReturnDel();
-        }
-        else
-        {
-            Return();
+            _isReturning = false;
         }
     }
     
