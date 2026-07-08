@@ -29,15 +29,13 @@ public class AudioClipPlayback : IDisposable
     /// <param name="id">The unique ID of the playback instance.</param>
     /// <param name="clip">The name of the audio clip to play.</param>
     /// <param name="volume">The playback volume (default is 1.0).</param>
-    /// <param name="loop">Indicates whether the clip should loop (default is false).</param>
-    /// <param name="destroyOnEnd">Indicates whether to destroy the clip after playback ends (default is true).</param>
-    public AudioClipPlayback(int id, string clip, float volume = 1f, bool loop = false, bool destroyOnEnd = true)
+    /// <param name="playbackMode">Indicates whether the clip should loop or stop after playback ends. (default is PlayOnce).</param>
+    public AudioClipPlayback(int id, string clip, float volume = 1f, PlaybackMode playbackMode = PlaybackMode.PlayOnce)
     {
         Id = id;
         Clip = clip;
         Volume = volume;
-        Loop = loop;
-        DestroyOnEnd = destroyOnEnd;
+        PlaybackMode = playbackMode;
     }
 
     /// <summary>
@@ -65,12 +63,13 @@ public class AudioClipPlayback : IDisposable
     /// <summary>
     /// Gets or sets a value indicating whether the clip should loop during playback.
     /// </summary>
-    public bool Loop { get; set; }
+    public PlaybackMode PlaybackMode { get; set; }
 
     /// <summary>
-    /// Gets a value indicating whether the clip should be destroyed after playback ends.
+    /// Indicates whether the playback instance is ready to be destroyed.
+    /// If PlaybackMode is not NeverStop, the playback instance will be marked as ready for destruction.
     /// </summary>
-    public bool DestroyOnEnd { get; }
+    public bool ReadyForDestroyed { get; set; }
 
     /// <summary>
     /// Gets the PCM samples of the audio clip.
@@ -96,7 +95,9 @@ public class AudioClipPlayback : IDisposable
     {
         get
         {
-            double duration = Samples.Length / (SamplingRate * Channels);
+            if (IsStream && StreamSource != null)
+                return StreamSource.Duration;
+            double duration = (double)Samples.Length / (SamplingRate * Channels);
 
             return TimeSpan.FromSeconds(duration);
         }
@@ -109,7 +110,9 @@ public class AudioClipPlayback : IDisposable
     {
         get
         {
-            double duration = ReadPosition / (SamplingRate * Channels);
+            if (IsStream && StreamSource != null)
+                return StreamSource.Position;
+            double duration = (double)ReadPosition / (SamplingRate * Channels);
 
             return TimeSpan.FromSeconds(duration);
         }
@@ -154,6 +157,12 @@ public class AudioClipPlayback : IDisposable
     {
         if (IsStream && StreamSource != null)
         {
+            if (IsPaused)
+            {
+                NextSample = null;
+                return true;
+            }
+            
             if (StreamSource.IsInitializing)
                 return true;
 
@@ -161,7 +170,19 @@ public class AudioClipPlayback : IDisposable
             int got = StreamSource.Read(NextSample, 0, NextSample.Length);
 
             if (got <= 0)
-                return false;
+            {
+                StreamSource.Stop();
+                if (PlaybackMode == PlaybackMode.NeverStop || (PlaybackMode == PlaybackMode.Loop && !ReadyForDestroyed))
+                {
+                    var oldStreamSource = StreamSource;
+                    StreamSource = new StreamPlayback(oldStreamSource.Url, oldStreamSource.Name);
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
 
             if (got < NextSample.Length)
                 Array.Clear(NextSample, got, NextSample.Length - got);
@@ -191,7 +212,7 @@ public class AudioClipPlayback : IDisposable
 
         if (ReadPosition >= Samples.Length)
         {
-            if (Loop)
+            if (PlaybackMode == PlaybackMode.NeverStop || (PlaybackMode == PlaybackMode.Loop && !ReadyForDestroyed))
                 ReadPosition = 0;
             else
             {
@@ -279,4 +300,17 @@ public class AudioClipPlayback : IDisposable
         if (StreamSource != null)
             StreamSource.Stop();
     }
+}
+
+/// <summary>
+/// Represents the playback mode of an audio clip.
+/// PlayOnce mode means the clip will play once and stop.
+/// Loop mode means the clip will loop until ReadyForDestroyed is set to true.
+/// NeverStop mode means the clip will play continuously.
+/// </summary>
+public enum PlaybackMode
+{
+    PlayOnce,
+    Loop,
+    NeverStop
 }

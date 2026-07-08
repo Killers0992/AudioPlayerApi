@@ -125,7 +125,7 @@ public class AudioClipStorage
     /// <summary>
     /// Destroys loaded clips.
     /// </summary>
-    /// <param name="name">Then name of clip.</param>
+    /// <param name="name">The name of clip.</param>
     /// <returns>If clip was successfully destroyed.</returns>
     public static bool DestroyClip(string name)
     {

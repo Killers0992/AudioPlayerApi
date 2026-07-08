@@ -51,7 +51,7 @@ public class PooledAudioPlayer
         
         foreach (var speaker in Player.SpeakersByName.Values)
         {
-            if (speaker != null)
+            if (speaker)
             {
                 speaker.Position = _hiddenPosition;
                 speaker.Volume = 0f;
@@ -94,6 +94,7 @@ public class PooledAudioPlayer
             return;
         }
         
+        Player.ReadyForDestroy = true;
         Player.StartCoroutine(MonitorClipsAndReturn(false));
     }
 
@@ -111,36 +112,14 @@ public class PooledAudioPlayer
             return;
         }
         
+        Player.ReadyForDestroy = true;
         Player.StartCoroutine(MonitorClipsAndReturn(true));
     }
 
     private System.Collections.IEnumerator MonitorClipsAndReturn(bool destroy)
     {
         while (Player.ClipsById.Count > 0)
-        {
-            bool allClipsWillEnd = true;
-            foreach (var clip in Player.ClipsById.Values)
-            {
-                if (clip.Loop && clip.DestroyOnEnd == false)
-                {
-                    allClipsWillEnd = false;
-                    break;
-                }
-            }
-            
-            if (!allClipsWillEnd)
-            {
-                foreach (var clip in Player.ClipsById.Values.ToList())
-                {
-                    if (clip.Loop)
-                    {
-                        clip.Loop = false;
-                    }
-                }
-            }
-            
-            yield return new WaitForSeconds(0.1f);
-        }
+            yield return null;
         
         _isReturning = false;
         
@@ -154,8 +133,11 @@ public class PooledAudioPlayer
         }
     }
     
-    public AudioClipPlayback AddClip(string clipName, float volume = 1f, bool loop = false, bool destroyOnEnd = true)
-        => Player.AddClip(clipName, volume, loop, destroyOnEnd);
+    public AudioClipPlayback AddClip(string clipName, float volume = 1f, PlaybackMode playbackMode = PlaybackMode.PlayOnce)
+        => Player.AddClip(clipName, volume, playbackMode);
+    
+    public AudioClipPlayback AddLiveStream(string url, float volume = 1f, string name = "RadioStream", PlaybackMode playbackMode = PlaybackMode.PlayOnce)
+        => Player.AddLiveStream(url, volume, name, playbackMode);
 
     public Speaker AddSpeaker(string name, Vector3 position, float volume = 1f, bool isSpatial = true, float minDistance = 5f, float maxDistance = 5f)
         => Player.AddSpeaker(name, position, volume, isSpatial, minDistance, maxDistance);
